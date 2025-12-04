@@ -15,7 +15,7 @@ openai.api_key = os.getenv("OPENAI_API_KEY")
 
 # Page configuration
 st.set_page_config(
-    page_title="AI Chatbot with SOP Analysis",
+    page_title="AI Чат-бот с Анализом СОП",
     page_icon="🤖",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -26,7 +26,110 @@ if "messages" not in st.session_state:
     st.session_state.messages = []
 
 if "system_prompt" not in st.session_state:
-    st.session_state.system_prompt = "You are a helpful AI assistant. Be concise, accurate, and professional in your responses."
+    st.session_state.system_prompt = """Вы профессиональный финансовый консультант банка, специализирующийся на денежных переводах и платежных операциях. 
+
+Вы должны строго следовать Стандартной Операционной Процедуре (СОП) при ответе на вопросы клиентов о задержках денежных переводов.
+
+ВАЖНО: Всегда отвечайте на русском языке.
+
+=== СТАНДАРТНАЯ ОПЕРАЦИОННАЯ ПРОЦЕДУРА ===
+
+ПРОЦЕДУРА ОБРАБОТКИ ЗАДЕРЖЕК ДЕНЕЖНЫХ ПЕРЕВОДОВ:
+
+1. ПОЛУЧЕНИЕ ЖАЛОБЫ
+   - Поприветствуйте клиента вежливо
+   - Зафиксируйте детали: дата перевода, сумма, направление
+   - Выразите понимание беспокойства клиента
+
+2. ПОДТВЕРЖДЕНИЕ И УСПОКОЕНИЕ
+   - Заверьте клиента, что вы поможете разобраться
+   - Объясните, что задержки бывают по разным причинам
+   - Сообщите, что вы проведете проверку
+
+3. ОПРЕДЕЛЕНИЕ ТИПА ПЕРЕВОДА
+   - Внутрибанковский: 1-3 рабочих дня
+   - Межбанковский (внутри страны): 3-5 рабочих дней
+   - Международный: 5-10 рабочих дней
+   - Валютный: 3-7 рабочих дней
+
+4. ОЦЕНКА НОРМАЛЬНОСТИ ЗАДЕРЖКИ
+   ЕСЛИ задержка в пределах нормы:
+   - Объясните стандартные сроки
+   - Укажите причины (банковская обработка, выходные, праздники)
+   - Сообщите ожидаемую дату поступления
+   - Успокойте клиента
+   
+   ЕСЛИ задержка превышает норму:
+   - Выразите сожаление
+   - Перейдите к расследованию причин
+
+5. ОСНОВНЫЕ ПРИЧИНЫ ЗАДЕРЖЕК
+   а) Банковская обработка:
+      - Межбанковые переводы требуют времени
+      - Выходные и праздники увеличивают сроки
+      - Разные часовые пояса
+   
+   б) Международные переводы:
+      - Валютная конвертация
+      - SWIFT система обработки
+      - Промежуточные банки-корреспонденты
+      - Комплаенс проверки разных стран
+   
+   в) Проверки безопасности:
+      - Антиотмывочный контроль (AML)
+      - Проверка на финансирование терроризма
+      - Санкционные списки
+      - Необычные суммы или паттерны
+   
+   г) Технические проблемы:
+      - Сбои в платежной системе
+      - Ошибки в реквизитах
+      - Проблемы с API
+   
+   д) Недостаточность информации:
+      - Неполные банковские реквизиты
+      - Несоответствие имен
+      - Неверный SWIFT/BIC код
+
+6. РЕКОМЕНДАЦИИ ДЛЯ КЛИЕНТА
+   - Проверить статус в онлайн-банке
+   - Убедиться в правильности реквизитов
+   - Подождать еще 2-3 рабочих дня
+   - Обратиться в службу поддержки с номером транзакции
+
+7. ЭСКАЛАЦИЯ (при необходимости)
+   ЕСЛИ прошло более 10 рабочих дней:
+   - Рекомендовать связаться со службой поддержки
+   - Указать необходимые данные (номер транзакции, дата, сумма)
+   - Сообщить о возможной компенсации
+   
+8. КОМПЕНСАЦИЯ
+   - Задержка 5-10 дней: извинения
+   - Задержка 10-15 дней: бонус 500 руб
+   - Задержка 15+ дней: возврат комиссии + бонус 1000 руб
+
+9. ЗАВЕРШЕНИЕ РАЗГОВОРА
+   - Спросите, остались ли вопросы
+   - Предложите дополнительную помощь
+   - Поблагодарите за обращение
+   - Пожелайте хорошего дня
+
+=== ПРАВИЛА ОБЩЕНИЯ ===
+- Будьте вежливы и терпеливы
+- Используйте понятный язык без сложных терминов
+- Выражайте эмпатию к беспокойству клиента
+- Предоставляйте конкретные сроки и даты
+- Всегда предлагайте решение или следующий шаг
+- Не обвиняйте клиента в ошибках
+- Если не знаете точный ответ, рекомендуйте обратиться в службу поддержки
+
+=== КОНТАКТЫ БАНКА ===
+Служба поддержки: +7 (800) 123-4567
+Email: support@bank.ru
+Часы работы: 24/7"""
+
+if "sop_loaded" not in st.session_state:
+    st.session_state.sop_loaded = False
 
 if "sop_content" not in st.session_state:
     st.session_state.sop_content = None
@@ -35,21 +138,21 @@ if "sop_steps" not in st.session_state:
     st.session_state.sop_steps = []
 
 # Sidebar navigation
-st.sidebar.title("🧭 Navigation")
+st.sidebar.title("🧭 Навигация")
 page = st.sidebar.radio(
-    "Select Page",
-    ["💬 Chatbot", "⚙️ System Prompt", "📄 SOP Analysis"],
+    "Выберите страницу",
+    ["💬 Чат-бот", "⚙️ Системный Промпт", "📄 Анализ СОП"],
     index=0
 )
 
 st.sidebar.markdown("---")
 st.sidebar.info(
     """
-    **About This App**
+    **О Приложении**
     
-    - **Chatbot**: Interactive AI conversation
-    - **System Prompt**: Configure AI behavior
-    - **SOP Analysis**: Analyze and visualize SOPs
+    - **Чат-бот**: Интерактивное общение с AI
+    - **Системный Промпт**: Настройка поведения AI
+    - **Анализ СОП**: Анализ и визуализация СОП
     """
 )
 
@@ -62,7 +165,7 @@ def extract_text_from_pdf(file):
             text += page.extract_text()
         return text
     except Exception as e:
-        st.error(f"Error reading PDF: {str(e)}")
+        st.error(f"Ошибка чтения PDF: {str(e)}")
         return None
 
 # Function to extract text from DOCX
@@ -74,7 +177,7 @@ def extract_text_from_docx(file):
             text += paragraph.text + "\n"
         return text
     except Exception as e:
-        st.error(f"Error reading DOCX: {str(e)}")
+        st.error(f"Ошибка чтения DOCX: {str(e)}")
         return None
 
 # Function to get ChatGPT response
@@ -88,19 +191,19 @@ def get_chatgpt_response(messages):
         )
         return response.choices[0].message.content
     except Exception as e:
-        return f"Error: {str(e)}"
+        return f"Ошибка: {str(e)}"
 
 # Function to analyze SOP and extract steps
 def analyze_sop(content):
     try:
         messages = [
-            {"role": "system", "content": "You are an expert in analyzing Standard Operating Procedures (SOPs) and extracting process steps."},
-            {"role": "user", "content": f"""Analyze the following SOP document and extract all the process steps. 
-            Return the steps in a JSON format with the following structure:
+            {"role": "system", "content": "Вы эксперт в анализе Стандартных Операционных Процедур (СОП) и извлечении шагов процесса. Отвечайте на русском языке."},
+            {"role": "user", "content": f"""Проанализируйте следующий СОП документ и извлеките все шаги процесса. 
+            Верните шаги в формате JSON со следующей структурой:
             {{
                 "steps": [
-                    {{"id": "1", "title": "Step Name", "description": "Step description", "type": "process"}},
-                    {{"id": "2", "title": "Decision Point", "description": "Decision description", "type": "decision"}},
+                    {{"id": "1", "title": "Название шага", "description": "Описание шага", "type": "process"}},
+                    {{"id": "2", "title": "Точка решения", "description": "Описание решения", "type": "decision"}},
                     ...
                 ],
                 "connections": [
@@ -109,9 +212,9 @@ def analyze_sop(content):
                 ]
             }}
             
-            Use type "start" for the beginning, "process" for actions, "decision" for decision points, and "end" for the final step.
+            Используйте тип "start" для начала, "process" для действий, "decision" для точек принятия решений, и "end" для финального шага.
             
-            SOP Document:
+            СОП Документ:
             {content[:4000]}"""}
         ]
         
@@ -134,13 +237,13 @@ def analyze_sop(content):
         
         return json.loads(result.strip())
     except Exception as e:
-        st.error(f"Error analyzing SOP: {str(e)}")
+        st.error(f"Ошибка анализа СОП: {str(e)}")
         return None
 
 # Function to create flowchart
 def create_flowchart(steps_data):
     try:
-        graph = graphviz.Digraph(comment='SOP Flowchart')
+        graph = graphviz.Digraph(comment='Блок-схема СОП')
         graph.attr(rankdir='TB', size='10,10')
         graph.attr('node', shape='box', style='rounded,filled', fillcolor='lightblue', fontname='Arial')
         
@@ -169,18 +272,18 @@ def create_flowchart(steps_data):
         
         return graph
     except Exception as e:
-        st.error(f"Error creating flowchart: {str(e)}")
+        st.error(f"Ошибка создания блок-схемы: {str(e)}")
         return None
 
 # ==================== PAGE 1: CHATBOT ====================
-if page == "💬 Chatbot":
-    st.title("💬 AI Chatbot")
-    st.markdown("Start a conversation with the AI assistant. Use the System Prompt page to customize its behavior.")
+if page == "💬 Чат-бот":
+    st.title("💬 AI Чат-бот")
+    st.markdown("Начните разговор с AI ассистентом. Используйте страницу Системный Промпт для настройки поведения.")
     
     # Clear chat button
     col1, col2 = st.columns([6, 1])
     with col2:
-        if st.button("🗑️ Clear Chat", use_container_width=True):
+        if st.button("🗑️ Очистить чат", use_container_width=True):
             st.session_state.messages = []
             st.rerun()
     
@@ -192,7 +295,7 @@ if page == "💬 Chatbot":
                 st.markdown(message["content"])
     
     # Chat input
-    if prompt := st.chat_input("Type your message here..."):
+    if prompt := st.chat_input("Введите ваше сообщение здесь..."):
         # Add user message to chat
         st.session_state.messages.append({"role": "user", "content": prompt})
         
@@ -206,7 +309,7 @@ if page == "💬 Chatbot":
         
         # Get assistant response
         with st.chat_message("assistant"):
-            with st.spinner("Thinking..."):
+            with st.spinner("Думаю..."):
                 response = get_chatgpt_response(api_messages)
                 st.markdown(response)
         
@@ -215,95 +318,184 @@ if page == "💬 Chatbot":
         st.rerun()
 
 # ==================== PAGE 2: SYSTEM PROMPT ====================
-elif page == "⚙️ System Prompt":
-    st.title("⚙️ System Prompt Configuration")
-    st.markdown("Configure how the AI assistant should behave. The system prompt guides the AI's personality, tone, and expertise.")
+elif page == "⚙️ Системный Промпт":
+    st.title("⚙️ Конфигурация Системного Промпта")
+    st.markdown("Настройте поведение AI ассистента. Системный промпт определяет личность, тон и экспертность AI.")
     
     st.markdown("---")
     
     # Predefined templates
-    st.subheader("📋 Quick Templates")
+    st.subheader("📋 Быстрые Шаблоны")
     col1, col2, col3 = st.columns(3)
     
     with col1:
-        if st.button("🤝 Professional Assistant", use_container_width=True):
-            st.session_state.system_prompt = "You are a professional business assistant. Provide clear, concise, and accurate responses. Use formal language and maintain a helpful, respectful tone."
+        if st.button("🤝 Профессиональный Ассистент", use_container_width=True):
+            st.session_state.system_prompt = "Вы профессиональный бизнес-ассистент. Предоставляйте четкие, краткие и точные ответы. Используйте формальный язык и поддерживайте полезный, уважительный тон."
             st.rerun()
     
     with col2:
-        if st.button("👨‍🏫 Technical Expert", use_container_width=True):
-            st.session_state.system_prompt = "You are a technical expert with deep knowledge in programming, engineering, and technology. Provide detailed technical explanations with examples. Use precise terminology and suggest best practices."
+        if st.button("👨‍🏫 Технический Эксперт", use_container_width=True):
+            st.session_state.system_prompt = "Вы технический эксперт с глубокими знаниями в программировании, инженерии и технологиях. Предоставляйте детальные технические объяснения с примерами. Используйте точную терминологию и предлагайте лучшие практики."
             st.rerun()
     
     with col3:
-        if st.button("🎨 Creative Writer", use_container_width=True):
-            st.session_state.system_prompt = "You are a creative writer with a flair for storytelling. Use vivid language, engaging narratives, and creative expression. Help users craft compelling content."
+        if st.button("🎨 Креативный Писатель", use_container_width=True):
+            st.session_state.system_prompt = "Вы креативный писатель с талантом к повествованию. Используйте яркий язык, увлекательные нарративы и креативное выражение. Помогайте пользователям создавать убедительный контент."
+            st.rerun()
+    
+    col4, col5, col6 = st.columns(3)
+    
+    with col4:
+        if st.button("помощник", use_container_width=True):
+            st.session_state.system_prompt = "Вы профессиональный помощник, говорящий на русском языке. Отвечайте четко, точно и профессионально. Используйте вежливый и дружелюбный тон. Всегда отвечайте на русском языке, если клиент пишет на русском."
+            st.rerun()
+    
+    with col5:
+        if st.button("💰 Финансовый Консультант (СОП)", use_container_width=True):
+            # Load SOP content
+            try:
+                # with open('sample_sop_russian.txt', 'r', encoding='utf-8') as f:
+                    # sop_content = f.read()
+                if st.session_state.sop_content:
+                    sop_content = st.session_state.sop_content
+                else:
+                    sop_content = "Стандартная Операционная Процедура (СОП) не загружена"
+                st.session_state.system_prompt = f"""Вы финансовый консультант банка, специализирующийся на денежных переводах и платежных операциях. 
+
+Вы должны строго следовать Стандартной Операционной Процедуре (СОП) при ответе на вопросы клиентов.
+
+ВАЖНО: Всегда отвечайте на русском языке.
+
+=== СТАНДАРТНАЯ ОПЕРАЦИОННАЯ ПРОЦЕДУРА ===
+
+{sop_content}
+
+=== ПРАВИЛА ОБЩЕНИЯ ===
+- Будьте вежливы и терпеливы
+- Используйте понятный язык без сложных терминов
+- Выражайте эмпатию к беспокойству клиента
+- Предоставляйте конкретные сроки и даты
+- Всегда предлагайте решение или следующий шаг
+- Следуйте процедурам из СОП выше"""
+                st.session_state.sop_loaded = True
+            except FileNotFoundError:
+                st.session_state.system_prompt = """Вы финансовый консультант банка, специализирующийся на денежных переводах и платежных операциях. 
+
+Объясняйте причины задержек платежей, процессы обработки, и помогайте клиентам понять банковские процедуры. 
+
+Основные причины задержек:
+1. Банковская обработка (3-5 дней)
+2. Международные переводы (5-10 дней)
+3. Проверки безопасности (1-3 дня)
+4. Технические проблемы
+5. Неверные реквизиты
+
+Будьте терпеливы и используйте понятный язык. Всегда отвечайте на русском языке."""
+                st.session_state.sop_loaded = False
+            st.rerun()
+    
+    with col6:
+        if st.button("🌍 Мультиязычный Ассистент", use_container_width=True):
+            st.session_state.system_prompt = "Вы мультиязычный ассистент, свободно владеющий английским, русским и другими языками. Определяйте язык пользователя и отвечайте на том же языке. Будьте полезны, профессиональны и адаптируйте стиль общения к языку и культуре пользователя. Для русских пользователей используйте формальное обращение 'Вы', если не попросят иначе."
             st.rerun()
     
     st.markdown("---")
     
     # Custom system prompt
-    st.subheader("✏️ Custom System Prompt")
+    st.subheader("✏️ Пользовательский Системный Промпт")
+    
+    # Show SOP loaded indicator
+    if st.session_state.get("sop_loaded", False):
+        st.success("✅ СОП документ загружен в системный промпт!")
+    
     new_prompt = st.text_area(
-        "Enter your custom system prompt:",
+        "Введите ваш пользовательский системный промпт:",
         value=st.session_state.system_prompt,
-        height=200,
-        help="This prompt will guide the AI's behavior and responses throughout the conversation."
+        height=300,
+        help="Этот промпт будет определять поведение и ответы AI на протяжении всего разговора."
     )
     
-    col1, col2 = st.columns([1, 5])
+    col1, col2, col3 = st.columns([1, 1, 4])
     with col1:
-        if st.button("💾 Save", use_container_width=True):
+        if st.button("💾 Сохранить", use_container_width=True):
             st.session_state.system_prompt = new_prompt
-            st.success("✅ System prompt saved successfully!")
+            st.success("✅ Системный промпт успешно сохранен!")
             st.balloons()
     
     with col2:
-        if st.button("🔄 Reset to Default", use_container_width=True):
-            st.session_state.system_prompt = "You are a helpful AI assistant. Be concise, accurate, and professional in your responses."
+        if st.button("🔄 Сбросить", use_container_width=True):
+            st.session_state.system_prompt = "Вы полезный AI ассистент. Будьте краткими, точными и профессиональными в ваших ответах."
+            st.session_state.sop_loaded = False
             st.rerun()
     
     st.markdown("---")
     
     # Current active prompt display
-    st.subheader("📌 Current Active Prompt")
-    st.info(st.session_state.system_prompt)
+    st.subheader("📌 Текущий Активный Промпт")
+    with st.expander("Показать текущий промпт", expanded=False):
+        st.info(st.session_state.system_prompt)
     
     # Tips section
-    with st.expander("💡 Tips for Writing Good System Prompts"):
+    with st.expander("💡 Советы по Написанию Хороших Системных Промптов"):
         st.markdown("""
-        **Effective system prompts should:**
+        **Эффективные системные промпты должны:**
         
-        1. **Be Clear and Specific**: Clearly define the role and expertise
-        2. **Set the Tone**: Specify formal, casual, technical, or creative tone
-        3. **Define Constraints**: Mention any limitations or focus areas
-        4. **Include Personality**: Give the AI a character or style
-        5. **Add Guidelines**: Specify formatting preferences or response structure
+        1. **Быть Четкими и Конкретными**: Ясно определите роль и область экспертизы
+        2. **Задать Тон**: Укажите формальный, неформальный, технический или креативный тон
+        3. **Определить Ограничения**: Упомяните любые ограничения или области фокуса
+        4. **Включить Личность**: Дайте AI характер или стиль
+        5. **Добавить Руководства**: Укажите предпочтения форматирования или структуры ответов
+        6. **Включить СОП**: Для специализированных задач включите процедуры и правила
         
-        **Examples:**
-        - "You are a patient teacher explaining concepts to beginners."
-        - "You are a data scientist specializing in machine learning. Provide code examples and explain algorithms."
-        - "You are a friendly customer support agent. Be empathetic and solution-focused."
+        **Примеры:**
+        - "Вы терпеливый учитель, объясняющий концепции новичкам."
+        - "Вы специалист по данным, специализирующийся на машинном обучении."
+        - "Вы дружелюбный агент поддержки клиентов. Будьте эмпатичны и ориентированы на решения."
+        """)
+    
+    # SOP Integration info
+    with st.expander("📄 Как Интегрировать СОП в Промпт"):
+        st.markdown("""
+        **Интеграция СОП Документов:**
+        
+        Кнопка "💰 Финансовый Консультант (СОП)" автоматически:
+        1. Загружает файл `sample_sop_russian.txt`
+        2. Встраивает весь СОП документ в системный промпт
+        3. Добавляет правила следования процедурам
+        4. AI будет строго следовать этим процедурам
+        
+        **Преимущества:**
+        - ✅ AI следует корпоративным процедурам
+        - ✅ Единообразные ответы
+        - ✅ Соответствие стандартам
+        - ✅ Профессиональная поддержка клиентов
+        
+        **Вы можете:**
+        - Редактировать загруженный промпт
+        - Добавлять свои процедуры
+        - Комбинировать несколько СОП
+        - Обновлять по мере изменения процессов
         """)
 
+
 # ==================== PAGE 3: SOP ANALYSIS ====================
-elif page == "📄 SOP Analysis":
-    st.title("📄 SOP Document Analysis & Flowchart")
-    st.markdown("Upload your Standard Operating Procedure (SOP) document to analyze its content and generate a process flowchart.")
+elif page == "📄 Анализ СОП":
+    st.title("📄 Анализ СОП Документа и Блок-схема")
+    st.markdown("Загрузите ваш документ Стандартной Операционной Процедуры (СОП) для анализа содержания и генерации блок-схемы процесса.")
     
     # File upload
-    st.subheader("📤 Upload SOP Document")
+    st.subheader("📤 Загрузить СОП Документ")
     uploaded_file = st.file_uploader(
-        "Choose a file",
+        "Выберите файл",
         type=['pdf', 'docx', 'txt'],
-        help="Upload your SOP document in PDF, DOCX, or TXT format"
+        help="Загрузите ваш СОП документ в формате PDF, DOCX или TXT"
     )
     
     if uploaded_file is not None:
         # Extract text based on file type
         file_type = uploaded_file.name.split('.')[-1].lower()
         
-        with st.spinner("Reading document..."):
+        with st.spinner("Чтение документа..."):
             if file_type == 'pdf':
                 content = extract_text_from_pdf(uploaded_file)
             elif file_type == 'docx':
@@ -311,50 +503,57 @@ elif page == "📄 SOP Analysis":
             elif file_type == 'txt':
                 content = uploaded_file.read().decode('utf-8')
             else:
-                st.error("Unsupported file type")
+                st.error("Неподдерживаемый тип файла")
                 content = None
         
         if content:
             st.session_state.sop_content = content
-            st.success(f"✅ Document loaded successfully! ({len(content)} characters)")
+            st.success(f"✅ Документ успешно загружен! ({len(content)} символов)")
             
             # Display document content
-            with st.expander("📖 View Document Content"):
-                st.text_area("Document Text", content, height=300, disabled=True)
+            with st.expander("📖 Просмотр Содержимого Документа"):
+                st.text_area("Текст Документа", content, height=300, disabled=True)
             
             st.markdown("---")
             
             # Analyze SOP button
-            st.subheader("🔍 Analyze SOP")
+            st.subheader("🔍 Анализ СОП")
             
             col1, col2 = st.columns([1, 3])
             with col1:
-                if st.button("🚀 Analyze & Generate Flowchart", use_container_width=True, type="primary"):
-                    with st.spinner("Analyzing SOP document and generating flowchart..."):
+                if st.button("🚀 Анализировать и Сгенерировать Блок-схему", use_container_width=True, type="primary"):
+                    with st.spinner("Анализ СОП документа и генерация блок-схемы..."):
                         steps_data = analyze_sop(content)
                         
                         if steps_data:
                             st.session_state.sop_steps = steps_data
-                            st.success("✅ Analysis complete!")
+                            st.success("✅ Анализ завершен!")
                             st.rerun()
             
             # Display analysis results
             if st.session_state.sop_steps:
                 st.markdown("---")
-                st.subheader("📊 Analysis Results")
+                st.subheader("📊 Результаты Анализа")
                 
                 # Display steps
-                with st.expander("📝 Process Steps", expanded=True):
+                with st.expander("📝 Шаги Процесса", expanded=True):
                     steps = st.session_state.sop_steps.get("steps", [])
                     
                     for i, step in enumerate(steps, 1):
                         step_type = step.get("type", "process")
                         icon = "🟢" if step_type == "start" else "🔴" if step_type == "end" else "🔶" if step_type == "decision" else "📌"
                         
+                        type_translation = {
+                            "start": "Старт",
+                            "end": "Финиш",
+                            "decision": "Решение",
+                            "process": "Процесс"
+                        }
+                        
                         st.markdown(f"""
-                        **{icon} Step {step['id']}: {step['title']}**
-                        - *Type*: {step_type.title()}
-                        - *Description*: {step.get('description', 'N/A')}
+                        **{icon} Шаг {step['id']}: {step['title']}**
+                        - *Тип*: {type_translation.get(step_type, step_type)}
+                        - *Описание*: {step.get('description', 'Н/Д')}
                         """)
                         
                         if i < len(steps):
@@ -362,7 +561,7 @@ elif page == "📄 SOP Analysis":
                 
                 # Generate and display flowchart
                 st.markdown("---")
-                st.subheader("🗺️ Process Flowchart")
+                st.subheader("🗺️ Блок-схема Процесса")
                 
                 try:
                     flowchart = create_flowchart(st.session_state.sop_steps)
@@ -376,7 +575,7 @@ elif page == "📄 SOP Analysis":
                             # Save flowchart as DOT file
                             dot_data = flowchart.source
                             st.download_button(
-                                label="📥 Download Flowchart (DOT)",
+                                label="📥 Скачать Блок-схему (DOT)",
                                 data=dot_data,
                                 file_name="sop_flowchart.dot",
                                 mime="text/plain"
@@ -384,50 +583,69 @@ elif page == "📄 SOP Analysis":
                         
                         with col2:
                             # Save steps as JSON
-                            json_data = json.dumps(st.session_state.sop_steps, indent=2)
+                            json_data = json.dumps(st.session_state.sop_steps, indent=2, ensure_ascii=False)
                             st.download_button(
-                                label="📥 Download Steps (JSON)",
+                                label="📥 Скачать Шаги (JSON)",
                                 data=json_data,
                                 file_name="sop_steps.json",
                                 mime="application/json"
                             )
                     
                 except Exception as e:
-                    st.error(f"Error generating flowchart: {str(e)}")
+                    st.error(f"Ошибка генерации блок-схемы: {str(e)}")
     
     else:
         # Instructions when no file is uploaded
-        st.info("👆 Please upload an SOP document to begin analysis.")
+        st.info("👆 Пожалуйста, загрузите СОП документ для начала анализа.")
         
-        with st.expander("ℹ️ How to use this feature"):
+        with st.expander("ℹ️ Как использовать эту функцию"):
             st.markdown("""
-            **Step-by-step guide:**
+            **Пошаговое руководство:**
             
-            1. **Upload Document**: Click the file uploader and select your SOP document (PDF, DOCX, or TXT)
-            2. **View Content**: Expand the document content viewer to verify the text was extracted correctly
-            3. **Analyze**: Click the "Analyze & Generate Flowchart" button
-            4. **Review**: View the extracted process steps and their relationships
-            5. **Visualize**: Check the automatically generated flowchart
-            6. **Download**: Save the flowchart or steps data for future reference
+            1. **Загрузить Документ**: Нажмите на загрузчик файлов и выберите ваш СОП документ (PDF, DOCX или TXT)
+            2. **Просмотр Содержимого**: Разверните просмотр содержимого документа для проверки правильности извлечения текста
+            3. **Анализировать**: Нажмите кнопку "Анализировать и Сгенерировать Блок-схему"
+            4. **Просмотр**: Просмотрите извлеченные шаги процесса и их взаимосвязи
+            5. **Визуализация**: Проверьте автоматически сгенерированную блок-схему
+            6. **Скачать**: Сохраните блок-схему или данные шагов для дальнейшего использования
             
-            **Supported File Types:**
+            **Поддерживаемые Типы Файлов:**
             - PDF (.pdf)
-            - Word Document (.docx)
-            - Text File (.txt)
+            - Документ Word (.docx)
+            - Текстовый Файл (.txt)
             
-            **Tips:**
-            - Ensure your SOP document is well-structured with clear steps
-            - The AI will identify process steps, decision points, and flow
-            - Complex SOPs may take a moment to analyze
+            **Советы:**
+            - Убедитесь, что ваш СОП документ хорошо структурирован с четкими шагами
+            - AI определит шаги процесса, точки принятия решений и поток
+            - Сложные СОП могут требовать некоторого времени для анализа
+            - Используйте файл `sample_sop_russian.txt` для тестирования
             """)
+        
+        # Quick test option
+        st.markdown("---")
+        st.subheader("🧪 Быстрое Тестирование")
+        st.markdown("Хотите быстро протестировать функцию? Используйте наш пример СОП документа!")
+        
+        col1, col2, col3 = st.columns([1, 1, 2])
+        with col1:
+            if st.button("📄 Загрузить Пример СОП", use_container_width=True):
+                try:
+                    with open('sample_sop_russian.txt', 'r', encoding='utf-8') as f:
+                        content = f.read()
+                    st.session_state.sop_content = content
+                    st.success("✅ Пример СОП загружен!")
+                    st.rerun()
+                except FileNotFoundError:
+                    st.error("Файл sample_sop_russian.txt не найден. Пожалуйста, загрузите свой документ.")
+
 
 # Footer
 st.sidebar.markdown("---")
 st.sidebar.markdown(
     """
     <div style='text-align: center'>
-        <small>Powered by OpenAI GPT-3.5-Turbo</small><br>
-        <small>Built with Streamlit 🎈</small>
+        <small>Работает на OpenAI GPT-3.5-Turbo</small><br>
+        <small>Создано с помощью Streamlit 🎈</small>
     </div>
     """,
     unsafe_allow_html=True
