@@ -131,6 +131,9 @@ Email: support@bank.ru
 if "sop_loaded" not in st.session_state:
     st.session_state.sop_loaded = False
 
+if "temperature" not in st.session_state:
+    st.session_state.temperature = 0.7
+
 if "sop_content" not in st.session_state:
     st.session_state.sop_content = None
 
@@ -146,6 +149,52 @@ page = st.sidebar.radio(
 )
 
 st.sidebar.markdown("---")
+
+# Temperature control
+st.sidebar.subheader("🌡️ Температура LLM")
+st.session_state.temperature = st.sidebar.slider(
+    "Креативность ответов",
+    min_value=0.0,
+    max_value=2.0,
+    value=st.session_state.temperature,
+    step=0.1,
+    help="""
+    **Температура** контролирует случайность ответов AI:
+    
+    • 0.0-0.3: Точные, предсказуемые ответы (для фактов, СОП)
+    • 0.4-0.7: Сбалансированные ответы (рекомендуется)
+    • 0.8-1.2: Креативные, разнообразные ответы
+    • 1.3-2.0: Очень креативные, экспериментальные
+    
+    Для банковской поддержки: 0.3-0.5
+    Для общих вопросов: 0.7
+    Для креативных задач: 1.0-1.5
+    """
+)
+
+# Temperature indicator
+temp_value = st.session_state.temperature
+if temp_value <= 0.3:
+    temp_emoji = "🎯"
+    temp_desc = "Точность"
+    temp_color = "blue"
+elif temp_value <= 0.7:
+    temp_emoji = "⚖️"
+    temp_desc = "Баланс"
+    temp_color = "green"
+elif temp_value <= 1.2:
+    temp_emoji = "🎨"
+    temp_desc = "Креативность"
+    temp_color = "orange"
+else:
+    temp_emoji = "🚀"
+    temp_desc = "Экспериментальность"
+    temp_color = "red"
+
+st.sidebar.markdown(f"**{temp_emoji} Режим:** {temp_desc}")
+
+st.sidebar.markdown("---")
+
 st.sidebar.info(
     """
     **О Приложении**
@@ -186,7 +235,7 @@ def get_chatgpt_response(messages):
         response = openai.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=messages,
-            temperature=0.7,
+            temperature=st.session_state.temperature,
             max_tokens=1000
         )
         return response.choices[0].message.content
@@ -280,9 +329,22 @@ if page == "💬 Чат-бот":
     st.title("💬 AI Чат-бот")
     st.markdown("Начните разговор с AI ассистентом. Используйте страницу Системный Промпт для настройки поведения.")
     
-    # Clear chat button
-    col1, col2 = st.columns([6, 1])
+    # Temperature and clear chat row
+    col1, col2, col3 = st.columns([4, 1.5, 1])
     with col2:
+        # Display current temperature
+        temp_value = st.session_state.temperature
+        if temp_value <= 0.3:
+            temp_icon = "🎯"
+        elif temp_value <= 0.7:
+            temp_icon = "⚖️"
+        elif temp_value <= 1.2:
+            temp_icon = "🎨"
+        else:
+            temp_icon = "🚀"
+        st.metric(label="Температура", value=f"{temp_value:.1f} {temp_icon}")
+    
+    with col3:
         if st.button("🗑️ Очистить чат", use_container_width=True):
             st.session_state.messages = []
             st.rerun()
@@ -346,7 +408,7 @@ elif page == "⚙️ Системный Промпт":
     col4, col5, col6 = st.columns(3)
     
     with col4:
-        if st.button("помощник", use_container_width=True):
+        if st.button("🇷🇺 Русский помощник", use_container_width=True):
             st.session_state.system_prompt = "Вы профессиональный помощник, говорящий на русском языке. Отвечайте четко, точно и профессионально. Используйте вежливый и дружелюбный тон. Всегда отвечайте на русском языке, если клиент пишет на русском."
             st.rerun()
     
@@ -355,11 +417,12 @@ elif page == "⚙️ Системный Промпт":
             # Load SOP content
             try:
                 # with open('sample_sop_russian.txt', 'r', encoding='utf-8') as f:
-                    # sop_content = f.read()
+                #     sop_content = f.read()
                 if st.session_state.sop_content:
                     sop_content = st.session_state.sop_content
                 else:
                     sop_content = "Стандартная Операционная Процедура (СОП) не загружена"
+                    
                 st.session_state.system_prompt = f"""Вы финансовый консультант банка, специализирующийся на денежных переводах и платежных операциях. 
 
 Вы должны строго следовать Стандартной Операционной Процедуре (СОП) при ответе на вопросы клиентов.
